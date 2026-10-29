@@ -11,10 +11,6 @@ jobs:
 check:
 runs-on: ubuntu-latest
 
-defaults:
-  run:
-    working-directory: backend
-
 steps:
   - name: Checkout repository
     uses: actions/checkout@v4
@@ -24,8 +20,6 @@ steps:
     with:
       node-version: 20
 
-  - name: Install dependencies
-    run: npm install
-
-  - name: Check server syntax
+  - name: Check backend syntax
+    working-directory: backend
     run: node --check src/server.js
