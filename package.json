@@ -1,0 +1,9 @@
+{
+"name": "cyberx-family-safety",
+"version": "1.0.0",
+"private": true,
+"description": "CyberX family safety project",
+"scripts": {
+"test": "echo "No tests configured yet""
+}
+}
