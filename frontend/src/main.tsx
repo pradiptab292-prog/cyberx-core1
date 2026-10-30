@@ -1,15 +1,37 @@
 
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ShieldCheck, Smartphone, Wifi, Copy, RefreshCw } from "lucide-react";
+import {
+  ShieldCheck,
+  Smartphone,
+  Wifi,
+  Copy,
+  RefreshCw,
+  Trash2,
+  Plus
+} from "lucide-react";
 import "./style.css";
 
 const API_URL = "https://cyberx-core1-1.onrender.com";
+
+type DemoDevice = {
+  id: number;
+  name: string;
+};
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
   const [demoCode, setDemoCode] = useState("");
   const [demoStatus, setDemoStatus] = useState("Not paired");
+  const [deviceName, setDeviceName] = useState("");
+
+  const [devices, setDevices] = useState<DemoDevice[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("cyberx-demo-devices") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     async function checkBackend() {
@@ -29,6 +51,10 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem("cyberx-demo-devices", JSON.stringify(devices));
+  }, [devices]);
+
   function generateDemoCode() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setDemoCode(code);
@@ -44,6 +70,23 @@ function App() {
     } catch {
       setDemoStatus("Copy unavailable — select the code manually");
     }
+  }
+
+  function addDevice() {
+    const name = deviceName.trim();
+
+    if (!name) return;
+
+    setDevices(current => [
+      ...current,
+      { id: Date.now(), name }
+    ]);
+
+    setDeviceName("");
+  }
+
+  function removeDevice(id: number) {
+    setDevices(current => current.filter(device => device.id !== id));
   }
 
   return (
@@ -71,8 +114,57 @@ function App() {
       <section className="card">
         <Smartphone size={28} />
         <h2>My Family Devices</h2>
-        <p>No real device connected.</p>
-        <p className="status">📱 No device connected</p>
+
+        {devices.length === 0 ? (
+          <p>No demo devices added yet.</p>
+        ) : (
+          devices.map(device => (
+            <div
+              key={device.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+                padding: "12px 0",
+                borderBottom: "1px solid #334155"
+              }}
+            >
+              <div>
+                <strong>📱 {device.name}</strong>
+                <p>Demo device — not connected</p>
+              </div>
+
+              <button onClick={() => removeDevice(device.id)}>
+                <Trash2 size={17} /> Remove
+              </button>
+            </div>
+          ))
+        )}
+
+        <p className="status">
+          {devices.length} demo device(s) added
+        </p>
+      </section>
+
+      <section className="card">
+        <h2>Demo Device Management</h2>
+        <p>Add a sample device to test your dashboard.</p>
+
+        <input
+          type="text"
+          placeholder="Enter demo device name"
+          value={deviceName}
+          onChange={event => setDeviceName(event.target.value)}
+        />
+
+        <button onClick={addDevice} disabled={!deviceName.trim()}>
+          <Plus size={17} /> Add Demo Device
+        </button>
+
+        <p>
+          <small>Demo only. This does not connect or monitor a real device.</small>
+        </p>
       </section>
 
       <section className="card">
@@ -94,7 +186,9 @@ function App() {
           </button>
         )}
 
-        <p><small>Demo only. This code does not pair or authorize a real device.</small></p>
+        <p>
+          <small>This code is for display testing only. It cannot authorize a real device.</small>
+        </p>
       </section>
 
       <section className="card">
