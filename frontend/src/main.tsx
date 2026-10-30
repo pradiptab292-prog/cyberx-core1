@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ShieldCheck, Smartphone, Wifi, Copy, RefreshCw,
-  Trash2, Plus, Info, X
+  Trash2, Plus, Info, X, History
 } from "lucide-react";
 import "./style.css";
 
@@ -14,6 +14,12 @@ type DemoDevice = {
   name: string;
   type: string;
   addedAt: string;
+};
+
+type Activity = {
+  id: number;
+  message: string;
+  time: string;
 };
 
 function App() {
@@ -32,16 +38,43 @@ function App() {
     }
   });
 
+  const [activities, setActivities] = useState<Activity[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("cyberx-activities") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  function logActivity(message: string) {
+    const entry: Activity = {
+      id: Date.now() + Math.random(),
+      message,
+      time: new Date().toLocaleString()
+    };
+
+    setActivities(current => [entry, ...current].slice(0, 50));
+  }
+
   useEffect(() => {
     async function checkBackend() {
+      let nextStatus = "Offline";
+
       try {
         const response = await fetch(`${API_URL}/health`);
         if (!response.ok) throw new Error("Backend unavailable");
         const data = await response.json();
-        setBackendStatus(data.status === "ok" ? "Connected" : "Offline");
+        nextStatus = data.status === "ok" ? "Connected" : "Offline";
       } catch {
-        setBackendStatus("Offline");
+        nextStatus = "Offline";
       }
+
+      setBackendStatus(current => {
+        if (current !== nextStatus) {
+          logActivity(`Backend ${nextStatus}`);
+        }
+        return nextStatus;
+      });
     }
 
     checkBackend();
@@ -53,17 +86,24 @@ function App() {
     localStorage.setItem("cyberx-demo-devices", JSON.stringify(devices));
   }, [devices]);
 
+  useEffect(() => {
+    localStorage.setItem("cyberx-activities", JSON.stringify(activities));
+  }, [activities]);
+
   function generateDemoCode() {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setDemoCode(code);
     setDemoStatus("Demo code generated — no device connected");
+    logActivity("Demo pairing code generated");
   }
 
   async function copyDemoCode() {
     if (!demoCode) return;
+
     try {
       await navigator.clipboard.writeText(demoCode);
       setDemoStatus("Demo code copied");
+      logActivity("Demo pairing code copied");
     } catch {
       setDemoStatus("Copy unavailable — select the code manually");
     }
@@ -81,12 +121,25 @@ function App() {
     };
 
     setDevices(current => [...current, newDevice]);
+    logActivity(`Demo device added: ${name}`);
     setDeviceName("");
   }
 
   function removeDevice(id: number) {
-    setDevices(current => current.filter(device => device.id !== id));
-    if (selectedDevice?.id === id) setSelectedDevice(null);
+    const device = devices.find(item => item.id === id);
+    if (!device) return;
+
+    setDevices(current => current.filter(item => item.id !== id));
+
+    if (selectedDevice?.id === id) {
+      setSelectedDevice(null);
+    }
+
+    logActivity(`Demo device removed: ${device.name}`);
+  }
+
+  function clearActivities() {
+    setActivities([]);
   }
 
   return (
@@ -192,6 +245,33 @@ function App() {
         )}
 
         <p><small>This code is for display testing only. It cannot authorize a real device.</small></p>
+      </section>
+
+      <section className="card">
+        <History size={26} />
+        <h2>Activity History</h2>
+        <p>Recent actions on this browser.</p>
+
+        {activities.length === 0 ? (
+          <p>No activity recorded yet.</p>
+        ) : (
+          <>
+            {activities.map(activity => (
+              <div key={activity.id} style={{
+                padding: "12px 0",
+                borderBottom: "1px solid #334155"
+              }}>
+                <strong>{activity.message}</strong>
+                <p><small>{activity.time}</small></p>
+              </div>
+            ))}
+            <button onClick={clearActivities}>
+              <Trash2 size={17} /> Clear History
+            </button>
+          </>
+        )}
+
+        <p><small>History is stored only in this browser, not on the server.</small></p>
       </section>
 
       <section className="card">
